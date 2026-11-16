@@ -1,0 +1,9 @@
+# Dependency directories
+node_modules/
+
+dist/
+
+coverage
+
+# `pnpm pack` output
+*.tgz

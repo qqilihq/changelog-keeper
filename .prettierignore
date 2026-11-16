@@ -1,0 +1,7 @@
+# Comments and trailing commas that Prettier would rewrite
+tsconfig.*
+
+pnpm-lock.yaml
+
+# fixtures are real changelogs, kept byte for byte
+test/fixtures/

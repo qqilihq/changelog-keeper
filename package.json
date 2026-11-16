@@ -1,0 +1,77 @@
+{
+  "name": "changelog-keeper",
+  "description": "Parse, lint and verify changelogs in the Keep a Changelog format",
+  "author": "Philipp Katz <philipp@philippkatz.de>",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "changelog-keeper": "dist/cli.js"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "bugs": {
+    "url": "https://github.com/qqilihq/changelog-keeper/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qqilihq/changelog-keeper.git"
+  },
+  "keywords": [
+    "changelog",
+    "keepachangelog",
+    "keep-a-changelog",
+    "lint",
+    "release"
+  ],
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "lint": "pnpm run lint:eslint && pnpm run lint:format && pnpm run lint:types && pnpm run lint:knip && pnpm run lint:changelog",
+    "lint:eslint": "eslint .",
+    "lint:format": "prettier --check .",
+    "lint:types": "tsc --noEmit",
+    "lint:knip": "knip",
+    "lint:changelog": "node lib/cli.ts lint",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"['./coverage', './dist'].forEach(entry => require('fs').rmSync(entry, { recursive: true, force: true }));\"",
+    "preversion": "pnpm run clean && pnpm run lint && pnpm test && pnpm run build",
+    "version": "node lib/cli.ts verify || (git checkout -- package.json && exit 1)",
+    "release": "pnpm version --message \"chore: release %s\"",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.20.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@11.25.0",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.5.0",
+    "husky": "^9.1.7",
+    "knip": "^6.45.1",
+    "lint-staged": "^17.6.1",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2"
+  }
+}
