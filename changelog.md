@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.0-beta.0 - 2026-11-16
+
 ### Added
 
 - `lint`: checks a changelog against the Keep a Changelog structure — one title, releases as `## [X.Y.Z] - YYYY-MM-DD`, newest first, one Unreleased section at the top, only the six section types, one bullet character, and complete, consistent link references where a file uses them
