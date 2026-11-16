@@ -1,5 +1,5 @@
 {
-  "name": "changelog-keeper",
+  "name": "@qqilihq/changelog-keeper",
   "description": "Parse, lint and verify changelogs in the Keep a Changelog format",
   "author": "Philipp Katz <philipp@philippkatz.de>",
   "version": "0.1.0-beta.0",
@@ -17,6 +17,9 @@
     "changelog-keeper": "dist/cli.js"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],

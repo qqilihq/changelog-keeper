@@ -5,10 +5,10 @@ Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangel
 ## Installation
 
 ```shell
-$ npm install --save-dev changelog-keeper
+$ npm install --save-dev @qqilihq/changelog-keeper
 ```
 
-Projects without a `package.json` can run it with `npx changelog-keeper`.
+Projects without a `package.json` can run it with `npx @qqilihq/changelog-keeper`.
 
 ## Usage
 
@@ -69,7 +69,7 @@ URLs are both understood.
 ## Library
 
 ```ts
-import { extract, parse, verify } from 'changelog-keeper';
+import { extract, parse, verify } from '@qqilihq/changelog-keeper';
 
 const changelog = parse(markdown); // { title, description, releases, links, diagnostics }
 const problems = verify(markdown, { version: '1.2.0' });
