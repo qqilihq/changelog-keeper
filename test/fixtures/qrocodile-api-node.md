@@ -1,0 +1,58 @@
+# Changelog
+
+Notable changes to `@qrocodile/api`. Versions follow [SemVer](https://semver.org/), with the
+usual pre-1.0 caveat: while the major is `0`, a **minor** bump may carry breaking changes.
+
+## Unreleased
+
+### Added
+
+- The `retroConsole` preset and the `knit` module style, which the API now offers.
+- The `cityLights`, `goldenHour`, `snowfall`, `winterNight`, `gingerbread` and
+  `christmasTree` presets, the `bokeh`, `snowfall`, `gingerbread` and `christmas-tree`
+  module styles, and the `bokeh` finder style, which the API now offers.
+
+### Changed
+
+- **Breaking:** the `christmas` preset is now called `christmasSweater`, as in the API. Code
+  passing `preset: 'christmas'` no longer type-checks; rename it to `christmasSweater`.
+
+- The type documentation now matches the deployed API. Colors (`moduleColor`, `background`)
+  are `#rgb` or `#rrggbb`; the API no longer accepts `#rrggbbaa`. The link in the
+  verification email carries its reference as `#r=…` rather than `?r=…`. Module and finder
+  style parameters outside a style’s declared range are refused. `finderUseModuleStyle` and
+  `finderColorInherit` default to `false`. The types themselves are unchanged.
+
+## 0.1.1-beta.0
+
+No functional changes — `dist/` is byte-identical to 0.1.0.
+
+Published to exercise the release pipeline end to end: trusted publishing over OIDC, the
+provenance attestation, and automatic creation of the GitHub release from this changelog.
+Cut as a pre-release so it takes the `beta` dist-tag and `npm install @qrocodile/api`
+continues to resolve to 0.1.0.
+
+## 0.1.0
+
+First public release.
+
+### Added
+
+- `createQrApiClient({ apiKey, baseUrl })` — a typed client for the QRocodile QR Code API.
+- `renderSvg(input)` returns an SVG `string`; `renderPng(input)` returns PNG bytes as an
+  `ArrayBuffer`. Both take `content` plus optional `design`, `size` and `fixContrast`, and
+  call `POST /v1/qr`, which supports every option the API offers.
+- `registerKey(email, lang?)` and `confirmKey(code, { email } | { rid })` for programmatic
+  API-key signup.
+- `QrApiError`, carrying `status` and a `code` typed with the API’s documented error codes,
+  so a `case` for a code that does not exist fails to compile. Network failures that never
+  reached the API reject with the underlying `fetch` error instead, untouched.
+- Dual ESM and CommonJS builds with bundled type declarations. Node 20 or newer.
+
+### Notes
+
+- **Server-side only.** The API key is a secret, and the API’s CORS deliberately withholds
+  the `Authorization` header, so browser calls to the render endpoints fail by design.
+- The design surface (presets, module and finder styles, palettes, logos, halos) is fully
+  typed from the API’s OpenAPI document, so editor autocomplete matches what the deployed API
+  actually accepts.
