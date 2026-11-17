@@ -2,7 +2,7 @@
   "name": "@qqilihq/changelog-keeper",
   "description": "Parse, lint and verify changelogs in the Keep a Changelog format",
   "author": "Philipp Katz <philipp@philippkatz.de>",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0-beta.1",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
