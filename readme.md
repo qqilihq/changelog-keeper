@@ -1,6 +1,8 @@
 # changelog-keeper
 
-Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. No dependencies.
+Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Two
+dependencies, [semver](https://github.com/npm/node-semver) and [marked](https://github.com/markedjs/marked), with none of
+their own.
 
 ## Installation
 
@@ -22,7 +24,12 @@ $ changelog-keeper parse                 # print the changelog as JSON
 
 The changelog is `changelog.md` in the current directory, in any letter case, or the one given with `--file`.
 Problems are printed as `file:line: message (rule)`. The exit status is 0 on success, 1 when the changelog has
-problems, and 2 on usage errors.
+problems, and 2 on usage errors and when the file cannot be read.
+
+Markdown is read with [marked](https://github.com/markedjs/marked), which slows down on blocks nested hundreds of levels
+deep, such as a list indented one step further on every line: 2,000 levels take about half a minute. Thousands of nested
+blockquotes make it fail, with exit status 2. Real changelogs come nowhere near this, but when running `lint` on
+changelogs from untrusted pull requests, give the job a timeout.
 
 ### Releasing with npm or pnpm
 
@@ -44,6 +51,8 @@ pnpm does not undo the bump when the script fails, hence the `git checkout`.
 $ changelog-keeper extract "$version" > release-notes.md
 ```
 
+The link definitions the section uses are appended, so its links work on their own.
+
 ## Rules
 
 | Rule                | Requires                                                                                                              |
@@ -58,6 +67,7 @@ $ changelog-keeper extract "$version" > release-notes.md
 | `section-duplicate` | each section type at most once per release                                                                            |
 | `section-empty`     | entries under every section type                                                                                      |
 | `bullet-style`      | one bullet character throughout the file                                                                              |
+| `html-comment`      | every HTML comment closed with `-->`; one that is not hides the rest of the file                                      |
 | `link`              | where a file uses link references: one for every bracketed version, in the right repository, comparing the right tags |
 | `release`           | `verify` only: entries for the version being released, as the newest release, and none left under Unreleased          |
 
@@ -77,6 +87,30 @@ const notes = extract(markdown, '1.2.0'); // undefined when there is nothing to 
 ```
 
 Every release carries its `version`, `date`, `sections` with their `entries`, and its `markdown`.
+
+### HTML
+
+```ts
+import { parse, renderer } from '@qqilihq/changelog-keeper';
+
+const changelog = parse(markdown);
+const html = renderer(changelog);
+
+html(changelog.title ?? '', { inline: true }); // without the <p>
+html(changelog.description); // <p>…</p>
+html(release.heading, { inline: true });
+html(entry.markdown); // <p>…</p>, or more blocks for an entry with a nested list
+```
+
+Link references resolve against every definition in the changelog, so a fragment renders as it would in place.
+
+`inline` is for headings and the title. It renders only the inline formatting, so a fragment of more than one paragraph,
+or with a nested list, comes out as plain text: the entry `One\n\n  Two` renders as `One\n\nTwo`. Entries can have
+either, so render them without it.
+
+The HTML is not sanitized. HTML in the changelog passes through as written, and Markdown alone can make a working
+`javascript:` link: `[x](javascript:alert(1))`. Before rendering a changelog you do not trust, for example from a pull
+request, sanitize the result, e.g. with [DOMPurify](https://github.com/cure53/DOMPurify).
 
 ## Development
 
