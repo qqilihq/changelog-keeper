@@ -23,6 +23,10 @@ Options:
                        in the package.json next to the changelog)
   --repository <url>   The repository the link references must point at
                        (default: the package.json's repository)
+  --section-types <list>
+                       The section types to accept, comma-separated, instead
+                       of Keep a Changelog's six, e.g.
+                       Added,Changed,Deprecated,Removed,Fixed,Security,Info
   -h, --help           Show this help
 
 Exit status: 0 on success, 1 when the changelog has problems, 2 on usage errors and
@@ -42,6 +46,7 @@ function main(args: string[]): number {
         file: { type: 'string' },
         version: { type: 'string' },
         repository: { type: 'string' },
+        'section-types': { type: 'string' },
         help: { type: 'boolean', short: 'h' },
       },
     });
@@ -68,6 +73,14 @@ function main(args: string[]): number {
     err(`Wrong number of arguments for ${command}.\n\n${usage}`);
     return 2;
   }
+  const sectionTypes = values['section-types']
+    ?.split(',')
+    .map((type) => type.trim())
+    .filter((type) => type !== '');
+  if (sectionTypes?.length === 0) {
+    err('--section-types needs at least one section type.\n');
+    return 2;
+  }
 
   const file = values.file ?? findChangelog();
   if (file === undefined) {
@@ -85,13 +98,14 @@ function main(args: string[]): number {
   // next to the changelog, so `--file` pointing into another project reads its manifest
   const packageJson = readPackageJson(path.dirname(file));
   const repository = values.repository ?? repositoryOf(packageJson);
+  const options = { repository, sectionTypes };
 
   // marked can fail on pathological input, e.g. thousands of nested
   // blockquotes; that is no problem with the changelog, so not exit status 1
   try {
     switch (command) {
       case 'lint':
-        return printDiagnostics(file, parse(markdown, { repository }).diagnostics, `${file} follows Keep a Changelog.`);
+        return printDiagnostics(file, parse(markdown, options).diagnostics, `${file} follows Keep a Changelog.`);
 
       case 'verify': {
         const version = values.version ?? (typeof packageJson?.version === 'string' ? packageJson.version : undefined);
@@ -105,7 +119,7 @@ function main(args: string[]): number {
         }
         return printDiagnostics(
           file,
-          verify(markdown, { version, repository }),
+          verify(markdown, { ...options, version }),
           `${file} is ready to release ${version}.`,
         );
       }
@@ -122,7 +136,7 @@ function main(args: string[]): number {
       }
 
       default: {
-        const changelog = parse(markdown, { repository });
+        const changelog = parse(markdown, options);
         out(`${JSON.stringify(changelog, null, 2)}\n`);
         return printDiagnostics(file, changelog.diagnostics);
       }

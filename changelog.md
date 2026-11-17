@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `--section-types` and `sectionTypes`: the section types to accept instead of Keep a Changelog's six, e.g. with `### Info` added
+
 ## 0.1.0-beta.1 - 2026-11-17
 
 ### Added

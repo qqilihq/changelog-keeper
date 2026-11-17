@@ -20,6 +20,7 @@ $ changelog-keeper verify                # ready to release package.json's versi
 $ changelog-keeper verify --version 1.2.0
 $ changelog-keeper extract 1.2.0         # print that release's section
 $ changelog-keeper parse                 # print the changelog as JSON
+$ changelog-keeper lint --section-types Added,Changed,Deprecated,Removed,Fixed,Security,Info
 ```
 
 The changelog is `changelog.md` in the current directory, in any letter case, or the one given with `--file`.
@@ -76,13 +77,17 @@ Keep a Changelog's own example. Brackets without a definition render as literal 
 `package.json` or `--repository`; without either, the links only have to agree with each other. GitHub and GitLab
 URLs are both understood.
 
+Keep a Changelog names six section types and leaves open whether there may be others. To accept a different set, list
+all of them with `--section-types`, comma-separated, or with `sectionTypes` in the library: add one, e.g. `Info`, leave
+one out, or translate them. They are checked like the six: each at most once per release, and with entries.
+
 ## Library
 
 ```ts
-import { extract, parse, verify } from '@qqilihq/changelog-keeper';
+import { CHANGE_TYPES, extract, parse, verify } from '@qqilihq/changelog-keeper';
 
 const changelog = parse(markdown); // { title, description, releases, links, diagnostics }
-const problems = verify(markdown, { version: '1.2.0' });
+const problems = verify(markdown, { version: '1.2.0', sectionTypes: [...CHANGE_TYPES, 'Info'] });
 const notes = extract(markdown, '1.2.0'); // undefined when there is nothing to say
 ```
 
