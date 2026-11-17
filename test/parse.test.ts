@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
-import { parse, type Rule } from '../lib/index.ts';
+import { CHANGE_TYPES, parse, type Rule } from '../lib/index.ts';
 
 const fixture = (name: string) => fs.readFileSync(new URL(`fixtures/${name}`, import.meta.url), 'utf8');
 
@@ -297,6 +297,48 @@ describe('parse', () => {
 
       it('rejects a type with no entries', () => {
         assert.deepEqual(problems(`${valid}\n### Fixed\n`), [[9, 'section-empty']]);
+      });
+
+      describe('own types', () => {
+        const options = { sectionTypes: [...CHANGE_TYPES, 'Info'] };
+        const info = valid.replace('Added', 'Info');
+        const problemsWith = (markdown: string, sectionTypes: readonly string[] = options.sectionTypes) =>
+          parse(markdown, { sectionTypes }).diagnostics.map(({ line, rule }) => [line, rule]);
+        const messageWith = (markdown: string) => parse(markdown, options).diagnostics[0]?.message ?? '';
+
+        it('replace the six', () => {
+          assert.deepEqual(problemsWith(info), []);
+          assert.deepEqual(problemsWith(valid), []);
+          assert.deepEqual(problems(info), [[5, 'section-type']]);
+          assert.deepEqual(problemsWith(valid, ['Changed', 'Fixed']), [[5, 'section-type']]);
+        });
+
+        it('are listed when a heading matches none', () => {
+          assert.match(
+            messageWith(valid.replace('Added', 'Breaking')),
+            /^`### Breaking` is not one of this changelog's section types; use one of `Added`, .*`Security`, `Info`\.$/,
+          );
+        });
+
+        it('name the right spelling when only the case is wrong', () => {
+          assert.match(messageWith(valid.replace('Added', 'info')), /Write `### Info`, not `### info`/);
+        });
+
+        it('are the ones suggested for a section type written as a release heading', () => {
+          const release = (type: string) => `# Changelog\n\n## ${type}\n\n- A thing.\n`;
+          const message = (type: string, sectionTypes: readonly string[]) =>
+            parse(release(type), { sectionTypes }).diagnostics[0]?.message ?? '';
+          assert.match(
+            message('Info', options.sectionTypes),
+            /is a section type, which is a level-3 heading: `### Info`/,
+          );
+          assert.doesNotMatch(message('Added', ['Info']), /section type/);
+        });
+
+        it('are checked like the six', () => {
+          assert.deepEqual(problemsWith(`${info}\n### Info\n\n- Another.\n`), [[9, 'section-duplicate']]);
+          assert.deepEqual(problemsWith(`${valid}\n### Info\n`), [[9, 'section-empty']]);
+        });
       });
     });
 

@@ -88,6 +88,10 @@ export interface ParseOptions {
    * `https://github.com/owner/repo`. Without it, the links only have to agree
    * with each other. */
   repository?: string | undefined;
+  /** The section types to accept, instead of the six of {@link CHANGE_TYPES}.
+   * To add one, e.g. `### Info`: `[...CHANGE_TYPES, 'Info']`; to drop one,
+   * leave it out. */
+  sectionTypes?: readonly string[] | undefined;
 }
 
 export type Report = (line: number, rule: Rule, message: string) => void;
@@ -109,11 +113,10 @@ const setextUnderlinePattern = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const linkLabelPattern = /^ {0,3}\[([^\]]+)\]:/;
 const releaseHeadingPattern = /^(\[)?([^[\]\s]+)(\])? - (\S+)( \[YANKED\])?$/;
 
-const changeTypeList = CHANGE_TYPES.map((type) => `\`${type}\``).join(', ');
-
 export function parse(markdown: string, options: ParseOptions = {}): Changelog {
   const diagnostics: Diagnostic[] = [];
   const report: Report = (line, rule, message) => diagnostics.push({ line, rule, message });
+  const sectionTypes = options.sectionTypes ?? CHANGE_TYPES;
 
   let title: string | undefined;
   const preamble: SourceLine[] = [];
@@ -215,7 +218,7 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
       );
       append(lines);
     } else if (depth === 2) {
-      releases.push(openRelease(content, line, report));
+      releases.push(openRelease(content, line, sectionTypes, report));
       append(lines.slice(1));
     } else if (depth === 3) {
       const release = currentRelease();
@@ -228,7 +231,7 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
         append(lines);
         continue;
       }
-      checkSectionType(content, release, line, report);
+      checkSectionType(content, sectionTypes, release, line, report);
       release.lines.push(first);
       release.sections.push({ type: content, line, lines: [], entries: [] });
       append(lines.slice(1));
@@ -261,7 +264,7 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
   };
 }
 
-function openRelease(content: string, line: number, report: Report): OpenRelease {
+function openRelease(content: string, line: number, sectionTypes: readonly string[], report: Report): OpenRelease {
   const release: OpenRelease = {
     heading: content,
     line,
@@ -304,7 +307,7 @@ function openRelease(content: string, line: number, report: Report): OpenRelease
 
   if (!versionMatch) {
     const bare = content.replace(/^\[|\]$/g, '');
-    const type = CHANGE_TYPES.find((t) => t.toLowerCase() === bare.toLowerCase());
+    const type = sectionTypes.find((t) => t.toLowerCase() === bare.toLowerCase());
     report(
       line,
       'release-heading',
@@ -341,15 +344,24 @@ function openRelease(content: string, line: number, report: Report): OpenRelease
   return release;
 }
 
-function checkSectionType(type: string, release: OpenRelease, line: number, report: Report): void {
-  if (!(CHANGE_TYPES as readonly string[]).includes(type)) {
-    const sameExceptCase = CHANGE_TYPES.find((t) => t.toLowerCase() === type.toLowerCase());
+function checkSectionType(
+  type: string,
+  sectionTypes: readonly string[],
+  release: OpenRelease,
+  line: number,
+  report: Report,
+): void {
+  if (!sectionTypes.includes(type)) {
+    const sameExceptCase = sectionTypes.find((t) => t.toLowerCase() === type.toLowerCase());
+    const list = sectionTypes.map((t) => `\`${t}\``).join(', ');
+    const what =
+      sectionTypes === CHANGE_TYPES ? 'a Keep a Changelog section type' : "one of this changelog's section types";
     report(
       line,
       'section-type',
       sameExceptCase
         ? `Write \`### ${sameExceptCase}\`, not \`### ${type}\`.`
-        : `\`### ${type}\` is not a Keep a Changelog section type; use one of ${changeTypeList}.`,
+        : `\`### ${type}\` is not ${what}; use one of ${list}.`,
     );
   }
   if (release.sections.some((section) => section.type === type)) {

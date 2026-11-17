@@ -46,6 +46,24 @@ describe('the CLI', () => {
       );
     });
 
+    it('accepts the section types given with --section-types instead of the six', () => {
+      const custom = changelog.replace('Added', 'Info') + '\n### Fixed\n\n- A fix.\n';
+      assert.equal(run(['lint'], { 'changelog.md': custom }).status, 1);
+      assert.equal(run(['lint', '--section-types', 'Info'], { 'changelog.md': custom }).status, 1);
+      const result = run(['lint', '--section-types', 'Info, Fixed'], { 'changelog.md': custom });
+      assert.equal(result.status, 0, result.stderr);
+      const verified = run(['verify', '--version', '1.0.0', '--section-types', 'Info,Fixed'], {
+        'changelog.md': custom,
+      });
+      assert.equal(verified.status, 0, verified.stderr);
+    });
+
+    it('rejects an empty --section-types as a usage error', () => {
+      const result = run(['lint', '--section-types', ' , '], { 'changelog.md': changelog });
+      assert.equal(result.status, 2);
+      assert.equal(result.stderr, '--section-types needs at least one section type.\n');
+    });
+
     it('checks the links against the repository in package.json', () => {
       const linked =
         changelog.replace('## Unreleased', '## [Unreleased]').replace('## 1.0.0', '## [1.0.0]') +
