@@ -1,6 +1,8 @@
 # changelog-keeper
 
-Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. No dependencies.
+Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Two
+dependencies, [semver](https://github.com/npm/node-semver) and [marked](https://github.com/markedjs/marked), with none of
+their own.
 
 ## Installation
 
@@ -22,7 +24,12 @@ $ changelog-keeper parse                 # print the changelog as JSON
 
 The changelog is `changelog.md` in the current directory, in any letter case, or the one given with `--file`.
 Problems are printed as `file:line: message (rule)`. The exit status is 0 on success, 1 when the changelog has
-problems, and 2 on usage errors.
+problems, and 2 on usage errors and when the file cannot be read.
+
+Markdown is read with [marked](https://github.com/markedjs/marked), which slows down on blocks nested hundreds of levels
+deep, such as a list indented one step further on every line: 2,000 levels take about half a minute. Thousands of nested
+blockquotes make it fail, with exit status 2. Real changelogs come nowhere near this, but when running `lint` on
+changelogs from untrusted pull requests, give the job a timeout.
 
 ### Releasing with npm or pnpm
 

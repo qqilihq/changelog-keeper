@@ -1,3 +1,5 @@
+import type { Tokens } from 'marked';
+import { blocks, type SourceLine } from './blocks.ts';
 import { checkLinks } from './links.ts';
 import { compareVersions, isValidVersion } from './version.ts';
 
@@ -86,15 +88,11 @@ export interface ParseOptions {
 
 export type Report = (line: number, rule: Rule, message: string) => void;
 
-interface SourceLine {
-  number: number;
-  text: string;
-}
-
 interface OpenSection {
   type: string;
   line: number;
   lines: SourceLine[];
+  entries: Entry[];
 }
 
 interface OpenRelease extends Omit<Release, 'description' | 'sections' | 'markdown'> {
@@ -102,12 +100,9 @@ interface OpenRelease extends Omit<Release, 'description' | 'sections' | 'markdo
   sections: OpenSection[];
 }
 
-const headingPattern = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?([ \t]*)$/;
-const linkDefinitionPattern = /^ {0,3}\[([^\]]+)\]:[ \t]*(\S+)[ \t]*$/;
-const fencePattern = /^ {0,3}(`{3,}|~{3,})/;
+const atxHeadingPattern = /^ {0,3}#/;
 const setextUnderlinePattern = /^ {0,3}(?:=+|-+)[ \t]*$/;
-const bulletPattern = /^([-*+])[ \t]/;
-const listItemPattern = /^(?:[-*+]|\d{1,9}[.)])[ \t]+/;
+const linkLabelPattern = /^ {0,3}\[([^\]]+)\]:/;
 const releaseHeadingPattern = /^(\[)?([^[\]\s]+)(\])? - (\S+)( \[YANKED\])?$/;
 
 const changeTypeList = CHANGE_TYPES.map((type) => `\`${type}\``).join(', ');
@@ -120,119 +115,115 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
   const preamble: SourceLine[] = [];
   const releases: OpenRelease[] = [];
   const links: LinkDefinition[] = [];
-  let fence: string | undefined;
   let bulletStyle: string | undefined;
   let seenHeading = false;
-  let previous: { text: string; plain: boolean } = { text: '', plain: false };
 
   const currentRelease = () => releases.at(-1);
-  const append = (line: SourceLine) => {
+  const append = (lines: SourceLine[]) => {
     const release = currentRelease();
     if (!release) {
-      preamble.push(line);
+      preamble.push(...lines);
       return;
     }
-    release.lines.push(line);
-    release.sections.at(-1)?.lines.push(line);
+    release.lines.push(...lines);
+    release.sections.at(-1)?.lines.push(...lines);
   };
 
-  const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
-  for (const [index, text] of lines.entries()) {
-    const line = { number: index + 1, text };
-    const before = previous;
-    previous = { text, plain: false };
-
-    const fenceMatch = fencePattern.exec(text);
-    if (fence !== undefined) {
-      if (fenceMatch?.[1]?.startsWith(fence) && fenceMatch[1].length >= fence.length) {
-        fence = undefined;
-      }
-      append(line);
-      continue;
-    }
-    if (fenceMatch?.[1]) {
-      fence = fenceMatch[1];
-      append(line);
+  for (const { token, lines, items } of blocks(markdown)) {
+    const [first] = lines;
+    if (first === undefined) {
       continue;
     }
 
-    const linkDefinition = linkDefinitionPattern.exec(text);
-    if (linkDefinition) {
-      links.push({ label: linkDefinition[1] ?? '', url: linkDefinition[2] ?? '', line: line.number });
+    if (token.type === 'def') {
+      const { raw, tag, href } = token as Tokens.Def;
+      links.push({ label: linkLabelPattern.exec(raw)?.[1] ?? tag, url: href, line: first.number });
       continue;
     }
 
-    const heading = headingPattern.exec(text);
-    if (heading) {
-      const depth = heading[1]?.length ?? 0;
-      const content = heading[2] ?? '';
-      if (heading[3]) {
-        report(line.number, 'heading', `The heading \`${'#'.repeat(depth)} ${content}\` ends in whitespace.`);
-      }
-      if (!seenHeading && depth !== 1) {
-        report(line.number, 'title', 'The changelog must start with a level-1 title, such as `# Changelog`.');
-      }
-      seenHeading = true;
-
-      if (depth === 1) {
-        if (title === undefined && releases.length === 0 && preamble.every((l) => l.text.trim() === '')) {
-          title = content;
-          continue;
-        }
-        report(
-          line.number,
-          'heading',
-          `\`# ${content}\` is a level-1 heading, but only the title may be one.` +
-            (/\d+\.\d+/.test(content) ? ' Releases are level-2 headings: `## [X.Y.Z] - YYYY-MM-DD`.' : ''),
-        );
-        append(line);
-      } else if (depth === 2) {
-        releases.push(openRelease(content, line.number, report));
-      } else if (depth === 3) {
-        const release = currentRelease();
-        if (!release) {
+    if (token.type === 'list') {
+      for (const { line, bullet, markdown: entry } of items) {
+        if (bullet !== undefined && bulletStyle === undefined) {
+          bulletStyle = bullet;
+        } else if (bullet !== undefined && bullet !== bulletStyle) {
           report(
-            line.number,
-            'heading',
-            `\`### ${content}\` is outside any release; section types belong under a \`## [X.Y.Z] - YYYY-MM-DD\` heading.`,
+            line,
+            'bullet-style',
+            `This list item uses \`${bullet}\`, but the first one in the file uses \`${bulletStyle}\`; use one bullet character throughout.`,
           );
-          append(line);
-          continue;
         }
-        checkSectionType(content, release, line.number, report);
-        release.lines.push(line);
-        release.sections.push({ type: content, line: line.number, lines: [] });
-      } else {
-        report(
-          line.number,
-          'heading',
-          `Level-${depth} headings are not part of the Keep a Changelog structure, which uses level 2 for ` +
-            'releases and level 3 for section types.',
-        );
-        append(line);
+        currentRelease()?.sections.at(-1)?.entries.push({ line, markdown: entry });
       }
+      append(lines);
       continue;
     }
 
-    if (setextUnderlinePattern.test(text) && before.plain) {
-      report(line.number, 'heading', `Write headings with \`#\`, not by underlining them: \`${before.text}\`.`);
+    if (token.type !== 'heading') {
+      append(lines);
+      continue;
     }
 
-    const bullet = bulletPattern.exec(text)?.[1];
-    if (bullet !== undefined) {
-      if (bulletStyle === undefined) {
-        bulletStyle = bullet;
-      } else if (bullet !== bulletStyle) {
-        report(
-          line.number,
-          'bullet-style',
-          `This list item uses \`${bullet}\`, but the first one in the file uses \`${bulletStyle}\`; use one bullet character throughout.`,
-        );
+    if (!atxHeadingPattern.test(first.text)) {
+      const underline = lines.findLastIndex((line) => setextUnderlinePattern.test(line.text));
+      report(
+        lines[underline]?.number ?? first.number,
+        'heading',
+        `Write headings with \`#\`, not by underlining them: \`${lines[underline - 1]?.text ?? first.text}\`.`,
+      );
+      append(lines);
+      continue;
+    }
+
+    const { depth, text: content } = token as Tokens.Heading;
+    const line = first.number;
+    if (/[ \t]$/.test(first.text)) {
+      report(line, 'heading', `The heading \`${'#'.repeat(depth)} ${content}\` ends in whitespace.`);
+    }
+    if (!seenHeading && depth !== 1) {
+      report(line, 'title', 'The changelog must start with a level-1 title, such as `# Changelog`.');
+    }
+    seenHeading = true;
+
+    if (depth === 1) {
+      if (title === undefined && releases.length === 0 && preamble.every((l) => l.text.trim() === '')) {
+        title = content;
+        append(lines.slice(1));
+        continue;
       }
+      report(
+        line,
+        'heading',
+        `\`# ${content}\` is a level-1 heading, but only the title may be one.` +
+          (/\d+\.\d+/.test(content) ? ' Releases are level-2 headings: `## [X.Y.Z] - YYYY-MM-DD`.' : ''),
+      );
+      append(lines);
+    } else if (depth === 2) {
+      releases.push(openRelease(content, line, report));
+      append(lines.slice(1));
+    } else if (depth === 3) {
+      const release = currentRelease();
+      if (!release) {
+        report(
+          line,
+          'heading',
+          `\`### ${content}\` is outside any release; section types belong under a \`## [X.Y.Z] - YYYY-MM-DD\` heading.`,
+        );
+        append(lines);
+        continue;
+      }
+      checkSectionType(content, release, line, report);
+      release.lines.push(first);
+      release.sections.push({ type: content, line, lines: [], entries: [] });
+      append(lines.slice(1));
+    } else {
+      report(
+        line,
+        'heading',
+        `Level-${depth} headings are not part of the Keep a Changelog structure, which uses level 2 for ` +
+          'releases and level 3 for section types.',
+      );
+      append(lines);
     }
-
-    previous = { text, plain: text.trim() !== '' && !listItemPattern.test(text) };
-    append(line);
   }
 
   if (!seenHeading) {
@@ -360,47 +351,10 @@ function closeRelease(release: OpenRelease, report: Report): Release {
       if (markdown === '') {
         report(section.line, 'section-empty', `\`### ${section.type}\` has no entries.`);
       }
-      return { type: section.type, line: section.line, markdown, entries: entriesOf(section.lines) };
+      return { type: section.type, line: section.line, markdown, entries: section.entries };
     }),
     markdown: joinLines(lines),
   };
-}
-
-/** The top-level list items. Indented lines continue an item; a paragraph
- * after a blank line ends it. */
-function entriesOf(lines: SourceLine[]): Entry[] {
-  const entries: Entry[] = [];
-  let current: { line: number; indent: number; parts: string[] } | undefined;
-  let afterBlank = false;
-
-  const flush = () => {
-    if (current) {
-      entries.push({ line: current.line, markdown: current.parts.join('\n').trim() });
-    }
-    current = undefined;
-  };
-
-  for (const { number, text } of lines) {
-    const marker = listItemPattern.exec(text);
-    if (marker) {
-      flush();
-      current = { line: number, indent: marker[0].length, parts: [text.slice(marker[0].length)] };
-      afterBlank = false;
-    } else if (current) {
-      const indent = /^[ \t]*/.exec(text)?.[0].length ?? 0;
-      if (text.trim() === '') {
-        current.parts.push('');
-        afterBlank = true;
-      } else if (afterBlank && indent === 0) {
-        flush();
-      } else {
-        current.parts.push(indent >= current.indent ? text.slice(current.indent) : text.trimStart());
-        afterBlank = false;
-      }
-    }
-  }
-  flush();
-  return entries;
 }
 
 function checkUnreleased(releases: Release[], report: Report): void {

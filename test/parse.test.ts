@@ -116,6 +116,60 @@ describe('parse', () => {
     it('accepts Windows line endings', () => {
       assert.deepEqual(problems('# Changelog\r\n\r\n## 1.0.0 - 2026-01-01\r\n\r\n### Added\r\n\r\n- A thing.\r\n'), []);
     });
+
+    it('accepts a byte-order mark', () => {
+      assert.deepEqual(problems('\uFEFF# Changelog\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n- A thing.\n'), []);
+    });
+
+    it('ignores headings inside HTML comments', () => {
+      const changelog = parse(
+        '# Changelog\n\n<!--\n## [Unreleased]\n### Added\n-->\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n- A thing.\n',
+      );
+      assert.deepEqual(changelog.diagnostics, []);
+      assert.deepEqual(
+        changelog.releases.map((release) => release.version),
+        ['1.0.0'],
+      );
+    });
+
+    it('ignores headings in fenced code nested deeper in a list', () => {
+      const changelog = parse(
+        '# Changelog\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n- A.\n  - B:\n\n        ```\n        ## x\n        ```\n',
+      );
+      assert.deepEqual(changelog.diagnostics, []);
+    });
+
+    /** Offsets count UTF-16 code units; counting code points instead would
+     * shift every line after an emoji. */
+    it('keeps line numbers right after characters outside the BMP', () => {
+      assert.deepEqual(problems('# Changelog 🎉\n\n## 1.0.0 - 2026-01-01\n\n### Breaking\n\n- 🎉 A thing.\n'), [
+        [5, 'section-type'],
+      ]);
+    });
+
+    /** Each item's line used to be counted from the start of the list. */
+    it('reads a long list in linear time, with the right lines', () => {
+      const items = Array.from({ length: 20_000 }, (_, index) => `- Item ${index}.`);
+      const markdown = `# Changelog\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n${items.join('\n')}\n\n  continued.\n- Last.\n`;
+      const start = performance.now();
+      const entries = parse(markdown).releases[0]?.sections[0]?.entries ?? [];
+      assert.ok(performance.now() - start < 1_000, `took ${Math.round(performance.now() - start)} ms`);
+      assert.deepEqual(
+        entries.slice(-2).map(({ line, markdown: entry }) => [line, entry]),
+        [
+          [20_006, 'Item 19999.\n\ncontinued.'],
+          [20_009, 'Last.'],
+        ],
+      );
+    });
+
+    it('reads link definitions with a title or angle brackets', () => {
+      const { links, releases } = parse(
+        '# Changelog\n\n## [1.0.0] - 2026-01-01\n\n### Added\n\n- A.\n\n[1.0.0]: <https://github.com/o/r/releases/tag/v1.0.0> "v1"\n',
+      );
+      assert.deepEqual(links, [{ label: '1.0.0', url: 'https://github.com/o/r/releases/tag/v1.0.0', line: 9 }]);
+      assert.equal(releases[0]?.markdown, '### Added\n\n- A.');
+    });
   });
 
   describe('rules', () => {

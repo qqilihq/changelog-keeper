@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Reads versions with `semver` and Markdown with `marked`, instead of with code of its own
+
+### Fixed
+
+- Link reference definitions with a title, `[1.0.0]: https://… "title"`, or in angle brackets are recognised, and no longer show up in the oldest release's section
+- Headings inside HTML comments are ignored
+- A byte-order mark at the start of the file no longer hides the title
+- Very long lines no longer make parsing slow
+
 ## 0.1.0-beta.0 - 2026-11-16
 
 ### Added

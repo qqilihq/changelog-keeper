@@ -25,7 +25,8 @@ Options:
                        (default: the package.json's repository)
   -h, --help           Show this help
 
-Exit status: 0 on success, 1 when the changelog has problems, 2 on usage errors.
+Exit status: 0 on success, 1 when the changelog has problems, 2 on usage errors and
+when the file cannot be read.
 `;
 
 const out = (text: string) => process.stdout.write(text);
@@ -85,43 +86,50 @@ function main(args: string[]): number {
   const packageJson = readPackageJson(path.dirname(file));
   const repository = values.repository ?? repositoryOf(packageJson);
 
-  switch (command) {
-    case 'lint':
-      return printDiagnostics(file, parse(markdown, { repository }).diagnostics, `${file} follows Keep a Changelog.`);
+  // marked can fail on pathological input, e.g. thousands of nested
+  // blockquotes; that is no problem with the changelog, so not exit status 1
+  try {
+    switch (command) {
+      case 'lint':
+        return printDiagnostics(file, parse(markdown, { repository }).diagnostics, `${file} follows Keep a Changelog.`);
 
-    case 'verify': {
-      const version = values.version ?? (typeof packageJson?.version === 'string' ? packageJson.version : undefined);
-      if (version === undefined) {
-        err('verify needs the version being released: pass --version, or run it next to a package.json.\n');
-        return 2;
+      case 'verify': {
+        const version = values.version ?? (typeof packageJson?.version === 'string' ? packageJson.version : undefined);
+        if (version === undefined) {
+          err('verify needs the version being released: pass --version, or run it next to a package.json.\n');
+          return 2;
+        }
+        if (!isValidVersion(version)) {
+          err(`${version} is not a valid semantic version.\n`);
+          return 2;
+        }
+        return printDiagnostics(
+          file,
+          verify(markdown, { version, repository }),
+          `${file} is ready to release ${version}.`,
+        );
       }
-      if (!isValidVersion(version)) {
-        err(`${version} is not a valid semantic version.\n`);
-        return 2;
-      }
-      return printDiagnostics(
-        file,
-        verify(markdown, { version, repository }),
-        `${file} is ready to release ${version}.`,
-      );
-    }
 
-    case 'extract': {
-      const version = operands[0] ?? '';
-      const section = extract(markdown, version);
-      if (section === undefined) {
-        err(`${file} has no entries for ${version}.\n`);
-        return 1;
+      case 'extract': {
+        const version = operands[0] ?? '';
+        const section = extract(markdown, version);
+        if (section === undefined) {
+          err(`${file} has no entries for ${version}.\n`);
+          return 1;
+        }
+        out(`${section}\n`);
+        return 0;
       }
-      out(`${section}\n`);
-      return 0;
-    }
 
-    default: {
-      const changelog = parse(markdown, { repository });
-      out(`${JSON.stringify(changelog, null, 2)}\n`);
-      return printDiagnostics(file, changelog.diagnostics);
+      default: {
+        const changelog = parse(markdown, { repository });
+        out(`${JSON.stringify(changelog, null, 2)}\n`);
+        return printDiagnostics(file, changelog.diagnostics);
+      }
     }
+  } catch (error) {
+    err(`${file} could not be read as Markdown: ${(error as Error).message}\n`);
+    return 2;
   }
 }
 

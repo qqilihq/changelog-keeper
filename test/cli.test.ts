@@ -96,6 +96,14 @@ describe('the CLI', () => {
     assert.equal((JSON.parse(result.stdout) as { releases: unknown[] }).releases.length, 2);
   });
 
+  /** A crash inside marked is no problem with the changelog, so not exit 1,
+   * and no stack trace. */
+  it('exits 2 when marked cannot read the file', () => {
+    const result = run(['lint'], { 'changelog.md': `# Changelog\n\n${'>'.repeat(5_000)} Deep.\n` });
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /^changelog\.md could not be read as Markdown: Maximum call stack size exceeded\n$/);
+  });
+
   it('exits 2 on usage errors', () => {
     assert.equal(run([]).status, 2);
     assert.equal(run(['frobnicate'], { 'changelog.md': changelog }).status, 2);
