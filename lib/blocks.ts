@@ -1,4 +1,4 @@
-import { Lexer, type Token, type Tokens } from 'marked';
+import { getDefaults, Lexer, type Token, type Tokens } from 'marked';
 
 export interface SourceLine {
   /** 1-based */
@@ -38,7 +38,9 @@ export function blocks(markdown: string): Block[] {
   let offset = 0;
   /** The line `offset` is on. */
   let line = 1;
-  for (const token of Lexer.lex(source)) {
+  // marked's own defaults, not the process-wide settings a program using
+  // marked may have changed with `marked.use`
+  for (const token of Lexer.lex(source, getDefaults())) {
     const { raw } = token;
     if (!source.startsWith(raw, offset)) {
       throw new Error(

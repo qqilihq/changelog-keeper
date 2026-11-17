@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `renderer`: renders a changelog's Markdown to HTML — title, description, headings, sections and entries — with link references resolved against the whole file
+- Link definitions carry their `title`, where they have one
+
 ### Changed
 
 - Reads versions with `semver` and Markdown with `marked`, instead of with code of its own
@@ -17,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Headings inside HTML comments are ignored
 - A byte-order mark at the start of the file no longer hides the title
 - Very long lines no longer make parsing slow
+- `extract` appends the link definitions the section uses, so `[#12]` no longer shows up in literal brackets in release notes
 
 ## 0.1.0-beta.0 - 2026-11-16
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { extract } from '../lib/index.ts';
+import { extract, parse } from '../lib/index.ts';
 
 // ported from qrocodile-api-node's release-notes script, which this replaces
 
@@ -32,6 +32,51 @@ describe('extract', () => {
 
   it('reads the last release to the end of the file', () => {
     assert.equal(extract(CHANGELOG, '0.1.0'), 'First public release.\n\n### Changed\n\n- Server-side only.');
+  });
+
+  /** Without them, release notes show `[#12]` in literal brackets. */
+  it('appends the link definitions the section uses, and only those', () => {
+    const linked =
+      CHANGELOG.replace('- A thing.', '- A thing ([#12], [Docs][docs]).') +
+      '\n[0.2.0]: https://github.com/owner/repo/compare/v0.1.0...v0.2.0\n' +
+      '[#12]: https://github.com/owner/repo/issues/12\n' +
+      '[docs]: <https://example.com/a b> "The \\"docs\\""\n' +
+      '[#12]: https://example.com/second-definition\n';
+    assert.equal(
+      extract(linked, '0.2.0'),
+      '### Added\n\n- A thing ([#12], [Docs][docs]).\n\n' +
+        '[#12]: https://github.com/owner/repo/issues/12\n' +
+        '[docs]: <https://example.com/a b> "The \\"docs\\""',
+    );
+  });
+
+  /** Written back the way they were read, or links stop resolving in the
+   * release notes. */
+  it('writes appended definitions so that they read back unchanged', () => {
+    const definitions = [
+      '[a]: <https://example.com/a(b>',
+      '[b]: <https://example.com/b)c>',
+      '[c]: <https://example.com/with space>',
+      '[d]: <https://example.com/\\<angle\\>>',
+      '[e]: https://example.com/back\\\\slash',
+      '[f]: <>',
+      '[g]: https://example.com/g "A \\"quoted\\" \\\\ title"',
+    ];
+    const markdown = `${CHANGELOG.replace('- A thing.', '- [a] [b] [c] [d] [e] [f] [g]')}\n${definitions.join('\n')}\n`;
+    const readBack = parse(`# Changelog\n\n${extract(markdown, '0.2.0') ?? ''}\n`).links;
+    assert.deepEqual(
+      readBack.map(({ label, url, title }) => ({ label, url, title })),
+      parse(markdown).links.map(({ label, url, title }) => ({ label, url, title })),
+    );
+  });
+
+  /** For every `[` without a `]`, a pattern that may run across `[` scans
+   * to the end of the input. */
+  it('finds the labels in linear time', () => {
+    const markdown = `${CHANGELOG.replace('- A thing.', `- ${'['.repeat(80_000)}`)}`;
+    const start = performance.now();
+    extract(markdown, '0.2.0');
+    assert.ok(performance.now() - start < 1_000, `took ${Math.round(performance.now() - start)} ms`);
   });
 
   it('leaves out the link references at the bottom', () => {

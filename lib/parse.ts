@@ -62,8 +62,11 @@ export interface Release {
 }
 
 export interface LinkDefinition {
+  /** As written. */
   label: string;
   url: string;
+  /** Present when the definition has one: `[label]: url "title"`. */
+  title?: string;
   line: number;
 }
 
@@ -136,8 +139,13 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
     }
 
     if (token.type === 'def') {
-      const { raw, tag, href } = token as Tokens.Def;
-      links.push({ label: linkLabelPattern.exec(raw)?.[1] ?? tag, url: href, line: first.number });
+      const { raw, tag, href, title } = token as Tokens.Def;
+      links.push({
+        label: linkLabelPattern.exec(raw)?.[1] ?? tag,
+        url: href,
+        ...(title ? { title } : {}),
+        line: first.number,
+      });
       continue;
     }
 

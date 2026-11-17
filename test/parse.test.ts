@@ -167,7 +167,9 @@ describe('parse', () => {
       const { links, releases } = parse(
         '# Changelog\n\n## [1.0.0] - 2026-01-01\n\n### Added\n\n- A.\n\n[1.0.0]: <https://github.com/o/r/releases/tag/v1.0.0> "v1"\n',
       );
-      assert.deepEqual(links, [{ label: '1.0.0', url: 'https://github.com/o/r/releases/tag/v1.0.0', line: 9 }]);
+      assert.deepEqual(links, [
+        { label: '1.0.0', url: 'https://github.com/o/r/releases/tag/v1.0.0', title: 'v1', line: 9 },
+      ]);
       assert.equal(releases[0]?.markdown, '### Added\n\n- A.');
     });
   });

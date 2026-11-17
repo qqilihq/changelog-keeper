@@ -12,3 +12,4 @@ export {
 } from './parse.ts';
 export { verify, type VerifyOptions } from './verify.ts';
 export { extract } from './extract.ts';
+export { renderer, type RenderOptions } from './render.ts';
