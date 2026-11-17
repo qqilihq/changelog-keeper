@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.0-beta.1 - 2026-11-17
+
 ### Added
 
 - `renderer`: renders a changelog's Markdown to HTML — title, description, headings, sections and entries — with link references resolved against the whole file
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Reads versions with `semver` and Markdown with `marked`, instead of with code of its own
+- Exits with status 2, not a stack trace, when a file cannot be read as Markdown, e.g. because it nests thousands of blockquotes
 
 ### Fixed
 
