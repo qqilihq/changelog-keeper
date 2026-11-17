@@ -18,6 +18,7 @@ export type Rule =
   | 'section-empty'
   | 'bullet-style'
   | 'link'
+  | 'html-comment'
   | 'release';
 
 export interface Diagnostic {
@@ -164,6 +165,14 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
       }
       append(lines);
       continue;
+    }
+
+    if (token.type === 'html' && /^ {0,3}<!--/.test(first.text) && !token.raw.includes('-->')) {
+      report(
+        first.number,
+        'html-comment',
+        'This HTML comment is never closed with `-->`, so it hides everything after it, as GitHub shows the file.',
+      );
     }
 
     if (token.type !== 'heading') {

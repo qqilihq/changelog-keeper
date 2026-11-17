@@ -300,6 +300,18 @@ describe('parse', () => {
       });
     });
 
+    /** An HTML comment runs to the end of the file when it is never closed,
+     * so the releases after it disappear without anything else to report. */
+    it('rejects an HTML comment that is never closed', () => {
+      const unclosed = `# Changelog\n\n<!-- add entries below\n\n${valid.replace('# Changelog\n\n', '')}`;
+      assert.deepEqual(problems(unclosed), [[3, 'html-comment']]);
+      assert.equal(parse(unclosed).releases.length, 0);
+      assert.deepEqual(
+        problems(`# Changelog\n\n<!-- add entries below -->\n\n${valid.replace('# Changelog\n\n', '')}`),
+        [],
+      );
+    });
+
     it('requires one bullet character throughout', () => {
       assert.deepEqual(problems(valid.replace('- A thing.', '* A thing.')), []);
       assert.deepEqual(problems(`${valid}* Another.\n`), [[8, 'bullet-style']]);

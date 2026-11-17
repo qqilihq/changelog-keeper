@@ -67,6 +67,7 @@ The link definitions the section uses are appended, so its links work on their o
 | `section-duplicate` | each section type at most once per release                                                                            |
 | `section-empty`     | entries under every section type                                                                                      |
 | `bullet-style`      | one bullet character throughout the file                                                                              |
+| `html-comment`      | every HTML comment closed with `-->`; one that is not hides the rest of the file                                      |
 | `link`              | where a file uses link references: one for every bracketed version, in the right repository, comparing the right tags |
 | `release`           | `verify` only: entries for the version being released, as the newest release, and none left under Unreleased          |
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `renderer`: renders a changelog's Markdown to HTML — title, description, headings, sections and entries — with link references resolved against the whole file
 - Link definitions carry their `title`, where they have one
+- `html-comment` rule: an HTML comment that is never closed, which hides the rest of the file
 
 ### Changed
 
