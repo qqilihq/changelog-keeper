@@ -21,6 +21,7 @@ $ changelog-keeper verify --version 1.2.0
 $ changelog-keeper extract 1.2.0         # print that release's section
 $ changelog-keeper parse                 # print the changelog as JSON
 $ changelog-keeper lint --section-types Added,Changed,Deprecated,Removed,Fixed,Security,Info
+$ changelog-keeper lint --section-order  # section types in the order Added, Changed, …
 ```
 
 The changelog is `changelog.md` in the current directory, in any letter case, or the one given with `--file`.
@@ -67,6 +68,7 @@ The link definitions the section uses are appended, so its links work on their o
 | `section-type`      | `### Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` or `Security`                                                |
 | `section-duplicate` | each section type at most once per release                                                                            |
 | `section-empty`     | entries under every section type                                                                                      |
+| `section-order`     | `--section-order` only: the section types within a release in the order they are listed                               |
 | `bullet-style`      | one bullet character throughout the file                                                                              |
 | `html-comment`      | every HTML comment closed with `-->`; one that is not hides the rest of the file                                      |
 | `link`              | where a file uses link references: one for every bracketed version, in the right repository, comparing the right tags |
@@ -80,6 +82,11 @@ URLs are both understood.
 Keep a Changelog names six section types and leaves open whether there may be others. To accept a different set, list
 all of them with `--section-types`, comma-separated, or with `sectionTypes` in the library: add one, e.g. `Info`, leave
 one out, or translate them. They are checked like the six: each at most once per release, and with entries.
+
+Keep a Changelog lists its six in an order, but does not ask releases to keep to it. To require that, pass
+`--section-order`, or `sectionOrder: true` in the library: the section types of each release then follow the order of
+the six, or of the list given with `--section-types`. A section type outside that list has no place in the order and is
+reported only as such.
 
 ## Library
 

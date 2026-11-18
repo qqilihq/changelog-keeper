@@ -299,6 +299,50 @@ describe('parse', () => {
         assert.deepEqual(problems(`${valid}\n### Fixed\n`), [[9, 'section-empty']]);
       });
 
+      describe('order', () => {
+        const release = (...types: string[]) =>
+          `# Changelog\n\n## 1.0.0 - 2026-01-01\n${types.map((type) => `\n### ${type}\n\n- A thing.\n`).join('')}`;
+        const problemsWith = (markdown: string, options: { sectionTypes?: readonly string[] } = {}) =>
+          parse(markdown, { ...options, sectionOrder: true }).diagnostics.map(({ line, rule }) => [line, rule]);
+
+        it('is not required by default', () => {
+          assert.deepEqual(problems(release('Fixed', 'Added')), []);
+        });
+
+        it('follows the section types when required', () => {
+          assert.deepEqual(problemsWith(release('Added', 'Changed', 'Fixed', 'Security')), []);
+          assert.deepEqual(problemsWith(release('Added', 'Fixed', 'Changed')), [[13, 'section-order']]);
+          assert.deepEqual(problemsWith(release('Security', 'Fixed', 'Added')), [
+            [9, 'section-order'],
+            [13, 'section-order'],
+          ]);
+        });
+
+        it('names the type it must precede and the order', () => {
+          const [diagnostic] = parse(release('Fixed', 'Added'), { sectionOrder: true }).diagnostics;
+          assert.equal(
+            diagnostic?.message,
+            '`### Added` must come before `### Fixed` in `## 1.0.0 - 2026-01-01`; section types go in the order ' +
+              '`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.',
+          );
+        });
+
+        it('follows own section types, and skips types outside them', () => {
+          const sectionTypes = ['Fixed', 'Added'];
+          assert.deepEqual(problemsWith(release('Fixed', 'Added'), { sectionTypes }), []);
+          assert.deepEqual(problemsWith(release('Added', 'Fixed'), { sectionTypes }), [[9, 'section-order']]);
+          assert.deepEqual(problemsWith(release('Added', 'Info', 'Fixed'), { sectionTypes }), [
+            [9, 'section-type'],
+            [13, 'section-order'],
+          ]);
+        });
+
+        it('leaves a type listed twice to section-duplicate', () => {
+          assert.deepEqual(problemsWith(release('Added', 'Added')), [[9, 'section-duplicate']]);
+          assert.deepEqual(problemsWith(release('Added', 'Fixed', 'Added')), [[13, 'section-duplicate']]);
+        });
+      });
+
       describe('own types', () => {
         const options = { sectionTypes: [...CHANGE_TYPES, 'Info'] };
         const info = valid.replace('Added', 'Info');
