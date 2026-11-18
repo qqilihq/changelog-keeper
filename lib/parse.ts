@@ -15,6 +15,7 @@ export type Rule =
   | 'unreleased'
   | 'section-type'
   | 'section-duplicate'
+  | 'section-order'
   | 'section-empty'
   | 'bullet-style'
   | 'link'
@@ -92,6 +93,10 @@ export interface ParseOptions {
    * To add one, e.g. `### Info`: `[...CHANGE_TYPES, 'Info']`; to drop one,
    * leave it out. */
   sectionTypes?: readonly string[] | undefined;
+  /** Whether the section types within a release must follow the order of
+   * `sectionTypes`, e.g. `Added` before `Fixed`. Keep a Changelog does not
+   * require one. */
+  sectionOrder?: boolean | undefined;
 }
 
 export type Report = (line: number, rule: Rule, message: string) => void;
@@ -232,6 +237,9 @@ export function parse(markdown: string, options: ParseOptions = {}): Changelog {
         continue;
       }
       checkSectionType(content, sectionTypes, release, line, report);
+      if (options.sectionOrder) {
+        checkSectionOrder(content, sectionTypes, release, line, report);
+      }
       release.lines.push(first);
       release.sections.push({ type: content, line, lines: [], entries: [] });
       append(lines.slice(1));
@@ -366,6 +374,31 @@ function checkSectionType(
   }
   if (release.sections.some((section) => section.type === type)) {
     report(line, 'section-duplicate', `\`### ${type}\` appears twice in \`## ${release.heading}\`; merge the two.`);
+  }
+}
+
+/** Reports a section type listed after one that the order puts below it. Types
+ * outside `sectionTypes` have no place in the order and are skipped, and a
+ * repeated type is left to `section-duplicate`: merging it fixes the order too. */
+function checkSectionOrder(
+  type: string,
+  sectionTypes: readonly string[],
+  release: OpenRelease,
+  line: number,
+  report: Report,
+): void {
+  const index = sectionTypes.indexOf(type);
+  if (index === -1 || release.sections.some((section) => section.type === type)) {
+    return;
+  }
+  const later = release.sections.find((section) => sectionTypes.indexOf(section.type) > index);
+  if (later) {
+    report(
+      line,
+      'section-order',
+      `\`### ${type}\` must come before \`### ${later.type}\` in \`## ${release.heading}\`; ` +
+        `section types go in the order ${sectionTypes.map((t) => `\`${t}\``).join(', ')}.`,
+    );
   }
 }
 

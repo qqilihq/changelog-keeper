@@ -58,6 +58,23 @@ describe('the CLI', () => {
       assert.equal(verified.status, 0, verified.stderr);
     });
 
+    it('requires the order of the section types with --section-order', () => {
+      const reordered = changelog + '\n### Changed\n\n- A change.\n';
+      assert.equal(run(['lint'], { 'changelog.md': reordered.replace('Added', 'Fixed') }).status, 0);
+      const result = run(['lint', '--section-order'], { 'changelog.md': reordered.replace('Added', 'Fixed') });
+      assert.equal(result.status, 1);
+      assert.match(
+        result.stderr,
+        /^changelog\.md:11: `### Changed` must come before `### Fixed` .* \(section-order\)\n$/,
+      );
+      const custom = ['lint', '--section-order', '--section-types', 'Fixed,Changed'];
+      assert.equal(run(custom, { 'changelog.md': reordered.replace('Added', 'Fixed') }).status, 0);
+      const verified = run(['verify', '--version', '1.0.0', '--section-order'], {
+        'changelog.md': reordered.replace('## Unreleased\n\n', '').replace('Added', 'Fixed'),
+      });
+      assert.equal(verified.status, 1);
+    });
+
     it('rejects an empty --section-types as a usage error', () => {
       const result = run(['lint', '--section-types', ' , '], { 'changelog.md': changelog });
       assert.equal(result.status, 2);
