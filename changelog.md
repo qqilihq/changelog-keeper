@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.0-beta.3 - 2026-11-18
+
 ### Added
 
 - `--section-order` and `sectionOrder`: require the section types within each release in the order they are listed, e.g. `Added` before `Fixed`
