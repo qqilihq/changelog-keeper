@@ -36,6 +36,7 @@ describe('parse', () => {
       assert.equal(changelog.releases.length, 13);
       assert.equal(changelog.releases[0]?.unreleased, true);
       assert.equal(changelog.releases[0]?.version, undefined);
+      assert.equal(changelog.releases[0]?.date, undefined);
     });
 
     it('reads version, date and brackets from the heading', () => {
@@ -96,6 +97,28 @@ describe('parse', () => {
       assert.deepEqual(
         changelog.releases[0]?.sections[0]?.entries.map((entry) => entry.markdown),
         ['One,\ncontinued.\n\nSecond paragraph.', 'Two'],
+      );
+    });
+
+    it('keeps a nested list in its entry', () => {
+      const changelog = parse('# Changelog\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n- One:\n  - A.\n  - B.\n- Two\n');
+      assert.deepEqual(changelog.diagnostics, []);
+      assert.deepEqual(
+        changelog.releases[0]?.sections[0]?.entries.map((entry) => entry.markdown),
+        ['One:\n- A.\n- B.', 'Two'],
+      );
+    });
+
+    /** Authors comment out entries to hide them; a comment within an entry's
+     * line stays, as part of its Markdown. */
+    it('leaves HTML comments between entries out of them', () => {
+      const changelog = parse(
+        '# Changelog\n\n## 1.0.0 - 2026-01-01\n\n### Added\n\n- One\n<!-- - Hidden -->\n- Two <!-- note -->\n<!--\n- Hidden\n-->\n- Three\n',
+      );
+      assert.deepEqual(changelog.diagnostics, []);
+      assert.deepEqual(
+        changelog.releases[0]?.sections[0]?.entries.map((entry) => entry.markdown),
+        ['One', 'Two <!-- note -->', 'Three'],
       );
     });
 
@@ -258,8 +281,10 @@ describe('parse', () => {
         assert.deepEqual(problems(heading('1.0.0 - 26-01-01')), [[3, 'release-date']]);
       });
 
-      it('still reads the version from a malformed heading', () => {
-        assert.equal(parse(heading('version-5.13.9 – 2026-10-04')).releases[0]?.version, '5.13.9');
+      it('still reads the version and the date from a malformed heading', () => {
+        const [release] = parse(heading('version-5.13.9 – 2026-10-04')).releases;
+        assert.equal(release?.version, '5.13.9');
+        assert.equal(release?.date, '2026-10-04');
       });
     });
 
