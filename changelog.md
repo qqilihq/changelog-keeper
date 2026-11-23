@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- `verify` takes the version as an argument, `verify 1.2.0`, like `extract`, instead of with `--version`
+- `--version` prints the version of changelog-keeper
+
 ## 0.1.0-beta.3 - 2026-11-18
 
 ### Added

@@ -11,16 +11,15 @@ const usage = `Usage: changelog-keeper <command> [options]
 
 Commands:
   lint                 Check that the changelog follows Keep a Changelog
-  verify               Check that it is ready to release a version: lint, plus a
+  verify [version]     Check that it is ready to release a version: lint, plus a
                        section with entries for that version, nothing left under
-                       Unreleased
+                       Unreleased (default: the version in the package.json next
+                       to the changelog)
   extract <version>    Print one release's section, e.g. as release notes
   parse                Print the parsed changelog as JSON
 
 Options:
   --file <path>        The changelog (default: changelog.md, in any letter case)
-  --version <version>  verify: the version being released (default: the version
-                       in the package.json next to the changelog)
   --repository <url>   The repository the link references must point at
                        (default: the package.json's repository)
   --section-types <list>
@@ -29,6 +28,7 @@ Options:
                        Added,Changed,Deprecated,Removed,Fixed,Security,Info
   --section-order      Require the section types within a release in the order
                        of the section types above
+  --version            Print the version of changelog-keeper
   -h, --help           Show this help
 
 Exit status: 0 on success, 1 when the changelog has problems, 2 on usage errors and
@@ -46,7 +46,7 @@ function main(args: string[]): number {
       allowPositionals: true,
       options: {
         file: { type: 'string' },
-        version: { type: 'string' },
+        version: { type: 'boolean' },
         repository: { type: 'string' },
         'section-types': { type: 'string' },
         'section-order': { type: 'boolean' },
@@ -64,6 +64,10 @@ function main(args: string[]): number {
     out(usage);
     return 0;
   }
+  if (values.version) {
+    out(`${ownVersion()}\n`);
+    return 0;
+  }
   if (command === undefined) {
     err(usage);
     return 2;
@@ -72,7 +76,8 @@ function main(args: string[]): number {
     err(`Unknown command: ${command}\n\n${usage}`);
     return 2;
   }
-  if (operands.length !== (command === 'extract' ? 1 : 0)) {
+  const [minOperands, maxOperands] = command === 'extract' ? [1, 1] : command === 'verify' ? [0, 1] : [0, 0];
+  if (operands.length < minOperands || operands.length > maxOperands) {
     err(`Wrong number of arguments for ${command}.\n\n${usage}`);
     return 2;
   }
@@ -111,9 +116,9 @@ function main(args: string[]): number {
         return printDiagnostics(file, parse(markdown, options).diagnostics, `${file} follows Keep a Changelog.`);
 
       case 'verify': {
-        const version = values.version ?? (typeof packageJson?.version === 'string' ? packageJson.version : undefined);
+        const version = operands[0] ?? (typeof packageJson?.version === 'string' ? packageJson.version : undefined);
         if (version === undefined) {
-          err('verify needs the version being released: pass --version, or run it next to a package.json.\n');
+          err('verify needs the version being released: pass it as an argument, or run it next to a package.json.\n');
           return 2;
         }
         if (!isValidVersion(version)) {
@@ -165,6 +170,14 @@ function printDiagnostics(file: string, diagnostics: Diagnostic[], success?: str
 
 function findChangelog(): string | undefined {
   return fs.readdirSync('.').find((name) => name.toLowerCase() === 'changelog.md');
+}
+
+/** From the package.json one level up, both from `lib/` and from `dist/`. */
+function ownVersion(): string {
+  const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  };
+  return packageJson.version;
 }
 
 function readPackageJson(directory: string): Record<string, unknown> | undefined {

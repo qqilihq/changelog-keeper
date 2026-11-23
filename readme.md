@@ -15,7 +15,7 @@ Projects without a `package.json` can run it with `npx @qqilihq/changelog-keeper
 ```shell
 $ changelog-keeper lint                  # check the structure
 $ changelog-keeper verify                # ready to release package.json's version?
-$ changelog-keeper verify --version 1.2.0
+$ changelog-keeper verify 1.2.0          # ready to release 1.2.0?
 $ changelog-keeper extract 1.2.0         # print that release's section
 $ changelog-keeper parse                 # print the changelog as JSON
 $ changelog-keeper lint --section-types Added,Changed,Deprecated,Removed,Fixed,Security,Info
