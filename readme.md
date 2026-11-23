@@ -122,6 +122,20 @@ The HTML is not sanitized. HTML in the changelog passes through as written, and 
 `javascript:` link: `[x](javascript:alert(1))`. Before rendering a changelog you do not trust, for example from a pull
 request, sanitize the result, e.g. with [DOMPurify](https://github.com/cure53/DOMPurify).
 
+## Versioning
+
+After a minor or patch update, such as from 1.2.0 to 1.3.0, a changelog that passed still passes, except when
+
+- a new rule reports a problem that breaks the changelog, such as an HTML comment that is never closed and hides the
+  rest of the file, or
+- a fixed rule reports what it let through before.
+
+Other new rules are opt-in, such as `--section-order`. A rule that is on by default and can fail a changelog that
+follows Keep a Changelog, or a stricter rule, comes only with a major update, such as to 2.0.0.
+
+When using changelog-keeper as a [library](#library), give a `switch` over a diagnostic's `rule` a `default`, as minor
+updates can add rules.
+
 ## Development
 
 ```shell
