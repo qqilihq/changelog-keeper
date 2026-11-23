@@ -1,4 +1,4 @@
-import { parse, type Diagnostic, type ParseOptions } from './parse.ts';
+import { CHANGE_TYPES, parse, type Diagnostic, type ParseOptions, type Release } from './parse.ts';
 
 export interface VerifyOptions extends ParseOptions {
   /** The version being released. */
@@ -36,10 +36,24 @@ export function verify(markdown: string, options: VerifyOptions): Diagnostic[] {
     if (newest !== release) {
       report(release.line, `${version} is not the newest release; \`## ${newest?.heading ?? ''}\` is listed above it.`);
     }
-    if (release.markdown === '') {
-      report(release.line, `\`## ${release.heading}\` has no entries.`);
+    if (!release.sections.some((section) => section.entries.length > 0)) {
+      report(release.line, `\`## ${release.heading}\` has no entries${missingEntriesHint(release, options)}.`);
     }
   }
 
   return problems.sort((a, b) => a.line - b.line);
+}
+
+/** Text that is not a list item under a section type, e.g. `TBD`, is not an
+ * entry. Says where the entries go when the release has such text. */
+function missingEntriesHint(release: Release, options: ParseOptions): string {
+  if (release.sections.length === 0 && release.markdown !== '') {
+    // Taken from the accepted section types, so that following the hint passes.
+    const example = (options.sectionTypes ?? CHANGE_TYPES)[0];
+    return ` under a section type${example === undefined ? '' : `, such as \`### ${example}\``}`;
+  }
+  if (release.sections.some((section) => section.markdown !== '')) {
+    return '; write them as a list under the section type';
+  }
+  return '';
 }
