@@ -52,7 +52,7 @@ describe('the CLI', () => {
       assert.equal(run(['lint', '--section-types', 'Info'], { 'changelog.md': custom }).status, 1);
       const result = run(['lint', '--section-types', 'Info, Fixed'], { 'changelog.md': custom });
       assert.equal(result.status, 0, result.stderr);
-      const verified = run(['verify', '--version', '1.0.0', '--section-types', 'Info,Fixed'], {
+      const verified = run(['verify', '1.0.0', '--section-types', 'Info,Fixed'], {
         'changelog.md': custom,
       });
       assert.equal(verified.status, 0, verified.stderr);
@@ -69,7 +69,7 @@ describe('the CLI', () => {
       );
       const custom = ['lint', '--section-order', '--section-types', 'Fixed,Changed'];
       assert.equal(run(custom, { 'changelog.md': reordered.replace('Added', 'Fixed') }).status, 0);
-      const verified = run(['verify', '--version', '1.0.0', '--section-order'], {
+      const verified = run(['verify', '1.0.0', '--section-order'], {
         'changelog.md': reordered.replace('## Unreleased\n\n', '').replace('Added', 'Fixed'),
       });
       assert.equal(verified.status, 1);
@@ -99,14 +99,36 @@ describe('the CLI', () => {
       assert.equal(run(['verify'], { 'changelog.md': changelog, 'package.json': '{"version":"1.1.0"}' }).status, 1);
     });
 
-    it('takes the version from --version, for projects without package.json', () => {
-      assert.equal(run(['verify', '--version', '1.0.0', '--file', 'notes.md'], { 'notes.md': changelog }).status, 0);
+    it('takes the version as an argument, for projects without package.json', () => {
+      assert.equal(run(['verify', '1.0.0', '--file', 'notes.md'], { 'notes.md': changelog }).status, 0);
+      assert.equal(
+        run(['verify', '1.1.0'], { 'changelog.md': changelog, 'package.json': '{"version":"1.0.0"}' }).status,
+        1,
+      );
     });
 
-    it('is a usage error without any version, or with an invalid one', () => {
+    it('is a usage error without any version, or with an invalid one, or with two', () => {
       assert.equal(run(['verify'], { 'changelog.md': changelog }).status, 2);
-      assert.equal(run(['verify', '--version', '1.0'], { 'changelog.md': changelog }).status, 2);
+      assert.equal(run(['verify', '1.0'], { 'changelog.md': changelog }).status, 2);
+      assert.equal(run(['verify', '1.0.0', '1.1.0'], { 'changelog.md': changelog }).status, 2);
     });
+
+    /** Before, `--version` took the version; such a call must not pass a
+     * release check by printing the tool's version and exiting 0. */
+    it('is a usage error with the old --version form', () => {
+      const result = run(['verify', '--version', '1.0.0'], { 'changelog.md': changelog });
+      assert.equal(result.status, 2);
+      assert.match(result.stderr, /verify <version>/);
+    });
+  });
+
+  it('--version prints the version of changelog-keeper', () => {
+    const { version } = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string;
+    };
+    const result = run(['--version']);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, `${version}\n`);
   });
 
   describe('extract', () => {
