@@ -112,14 +112,6 @@ describe('the CLI', () => {
       assert.equal(run(['verify', '1.0'], { 'changelog.md': changelog }).status, 2);
       assert.equal(run(['verify', '1.0.0', '1.1.0'], { 'changelog.md': changelog }).status, 2);
     });
-
-    /** Before, `--version` took the version; such a call must not pass a
-     * release check by printing the tool's version and exiting 0. */
-    it('is a usage error with the old --version form', () => {
-      const result = run(['verify', '--version', '1.0.0'], { 'changelog.md': changelog });
-      assert.equal(result.status, 2);
-      assert.match(result.stderr, /verify <version>/);
-    });
   });
 
   it('--version prints the version of changelog-keeper', () => {

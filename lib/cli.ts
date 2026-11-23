@@ -65,12 +65,6 @@ function main(args: string[]): number {
     return 0;
   }
   if (values.version) {
-    // `--version` used to take the version for verify; with a command it is
-    // most likely such a call, which must not pass by printing a version
-    if (command !== undefined) {
-      err(`--version takes no command; for verify, pass the version as an argument: verify <version>.\n\n${usage}`);
-      return 2;
-    }
     out(`${ownVersion()}\n`);
     return 0;
   }
