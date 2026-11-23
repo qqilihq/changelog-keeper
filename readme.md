@@ -1,8 +1,6 @@
 # changelog-keeper
 
-Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Two
-dependencies, [semver](https://github.com/npm/node-semver) and [marked](https://github.com/markedjs/marked), with none of
-their own.
+Parse, lint and verify changelogs in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## Installation
 
