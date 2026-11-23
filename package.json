@@ -48,6 +48,7 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"['./coverage', './dist'].forEach(entry => require('fs').rmSync(entry, { recursive: true, force: true }));\"",
     "preversion": "pnpm run clean && pnpm run lint && pnpm test && pnpm run build",
+    "prepack": "pnpm run clean && pnpm run build",
     "version": "node lib/cli.ts verify || (git checkout -- package.json && exit 1)",
     "release": "pnpm version --message \"chore: release %s\"",
     "prepare": "husky"
