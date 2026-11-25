@@ -67,6 +67,41 @@ describe('verify', () => {
     assert.deepEqual(problems(empty, '1.1.0'), [[5, '`## 1.1.0 - 2026-02-01` has no entries.']]);
   });
 
+  it('reports a release with text but no section type', () => {
+    const prose = promoted.replace('### Added\n\n- A thing.\n\n', 'TBD\n\n');
+    assert.deepEqual(problems(prose, '1.1.0'), [
+      [5, '`## 1.1.0 - 2026-02-01` has no entries under a section type, such as `### Added`.'],
+    ]);
+  });
+
+  it('reports a release with a list item but no section type', () => {
+    const bullet = promoted.replace('### Added\n\n- A thing.\n\n', '- A thing.\n\n');
+    assert.deepEqual(problems(bullet, '1.1.0'), [
+      [5, '`## 1.1.0 - 2026-02-01` has no entries under a section type, such as `### Added`.'],
+    ]);
+  });
+
+  it('reports a release with text but no list under its section type', () => {
+    const prose = promoted.replace('### Added\n\n- A thing.\n\n', '### Added\n\nTBD\n\n');
+    assert.deepEqual(problems(prose, '1.1.0'), [
+      [5, '`## 1.1.0 - 2026-02-01` has no entries; write them as a list under the section type.'],
+    ]);
+  });
+
+  it('takes the example section type from the accepted ones', () => {
+    const prose = promoted.replace('### Added\n\n- A thing.\n\n', 'TBD\n\n').replace('### Added', '### Info');
+    const messages = verify(prose, { version: '1.1.0', sectionTypes: ['Info'] }).map(({ message }) => message);
+    assert.deepEqual(messages, ['`## 1.1.0 - 2026-02-01` has no entries under a section type, such as `### Info`.']);
+  });
+
+  it('reports a release whose sections are all empty, next to the section-empty rule', () => {
+    const emptySection = promoted.replace('### Added\n\n- A thing.\n\n', '### Added\n\n');
+    assert.deepEqual(problems(emptySection, '1.1.0'), [
+      [5, '`## 1.1.0 - 2026-02-01` has no entries.'],
+      [7, '`### Added` has no entries.'],
+    ]);
+  });
+
   it('includes everything lint reports', () => {
     const malformed = promoted.replace('### Added\n\n- A thing.', '### Breaking\n\n- A thing.');
     assert.equal(verify(malformed, { version: '1.1.0' })[0]?.rule, 'section-type');

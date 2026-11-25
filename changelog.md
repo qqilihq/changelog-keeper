@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `verify` takes the version as an argument, `verify 1.2.0`, like `extract`, instead of with `--version`
 - `--version` prints the version of changelog-keeper
 
+### Fixed
+
+- `verify` reports a release with text but no entries, e.g. only `TBD`, with or without a section type, instead of passing it
+
 ## 0.1.0-beta.3 - 2026-11-18
 
 ### Added
